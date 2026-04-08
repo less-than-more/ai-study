@@ -1,0 +1,13 @@
+pandas
+matplotlib
+seaborn
+Pillow==8.4.0
+openpyxl
+xlrd
+onnxruntime
+scikit-learn
+xgboost
+opencv-python==4.10.0.84
+imblearn
+notebook==6.4.5
+traitlets==5.9.0

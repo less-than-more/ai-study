@@ -1,5 +1,5 @@
 # Requirement
-need to have `make` command first.
+    - make
 
 ### install make for windows
 run the command in powershell with administrator user
@@ -17,3 +17,10 @@ make --version
 
 # setup venv
 ```make```
+
+# Usage
+After setup venv, run command
+
+Windows powershell: `.venv\Scripts\Activate.ps1`
+
+Macos terminal: `source .venv/bin/activate`

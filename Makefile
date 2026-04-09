@@ -1,42 +1,48 @@
-.PHONY: all setup_venv
+.PHONY: all check_uv setup_venv clean
+.DEFAULT_GOAL := all
 
-# Check system family and set variables accordingly
+PYTHON_VERSION ?= 3.9.7
+PIP_INDEX_URL ?= https://mirrors.aliyun.com/pypi/simple/
+
 ifeq ($(OS),Windows_NT)
     SYSTEM := Windows
-    UV_INSTALL := powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-    VENV_ACTIVATE := .venv\Scripts\activate
-    UV := uv
+    UV_BIN := $(shell powershell -NoProfile -Command 'if (Get-Command uv -ErrorAction SilentlyContinue) { (Get-Command uv).Source } else { Join-Path $$env:USERPROFILE ".local\bin\uv.exe" }')
+    PYTHON_BIN := .venv/Scripts/python.exe
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
         SYSTEM := Linux
-    endif
-    ifeq ($(UNAME_S),Darwin)
+    else ifeq ($(UNAME_S),Darwin)
         SYSTEM := macOS
+    else
+        SYSTEM := $(UNAME_S)
     endif
-    UV_INSTALL := curl -LsSf https://astral.sh/uv/install.sh | sh
-    VENV_ACTIVATE := source .venv/bin/activate
-    UV := uv
+    UV_BIN := $(shell if command -v uv >/dev/null 2>&1; then command -v uv; else echo $$HOME/.local/bin/uv; fi)
+    PYTHON_BIN := .venv/bin/python
 endif
 
 all: setup_venv
 
 check_uv:
+ifeq ($(OS),Windows_NT)
+	@powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command uv -ErrorAction SilentlyContinue) { exit 0 } else { Write-Host 'uv is not installed. Installing...'; irm https://astral.sh/uv/install.ps1 | iex }"
+else
 	@command -v uv >/dev/null 2>&1 || { \
-		echo >&2 "uv is not installed. Installing..."; \
-		$(UV_INSTALL); \
+		echo "uv is not installed. Installing..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
 	}
+endif
 
 setup_venv: check_uv
-	$(UV) venv --python 3.9.7 && \
-	source .venv/bin/activate && \
-	$(UV) pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ && \
-	$(UV) pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+	@echo "Setting up virtual environment on $(SYSTEM)..."
+	@"$(UV_BIN)" venv --python $(PYTHON_VERSION)
+	@"$(UV_BIN)" pip install --python "$(PYTHON_BIN)" --upgrade pip -i "$(PIP_INDEX_URL)"
+	@"$(UV_BIN)" pip install --python "$(PYTHON_BIN)" --no-cache-dir -r requirements.txt -i "$(PIP_INDEX_URL)"
 
 clean:
 	@echo "Removing virtual environment..."
-ifeq ($(SYSTEM),Windows)
-	@powershell -c "if (Test-Path .venv) { rmdir -r -force .venv }"
+ifeq ($(OS),Windows_NT)
+	@powershell -NoProfile -Command "if (Test-Path .venv) { Remove-Item -Recurse -Force .venv }"
 else
 	@rm -rf .venv
 endif
